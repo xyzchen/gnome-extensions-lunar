@@ -1,0 +1,4 @@
+.lunar-calendar .calendar-day-with-events {
+    background-size: cover;
+    box-shadow: 0px -1px rgba(238, 238, 236, 0.3) inset;
+}

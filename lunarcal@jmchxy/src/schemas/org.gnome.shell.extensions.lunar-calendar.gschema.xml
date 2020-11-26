@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<schemalist gettext-domain="gnome-shell-extensions-lunar-calendar">
+  <enum id="font-sizes">
+    <value nick="xx-small" value="1" />
+    <value nick="x-small" value="2" />
+    <value nick="small" value="3" />
+    <value nick="none" value="4" />
+  </enum>
+  <schema id="org.gnome.shell.extensions.lunar-calendar" path="/org/gnome/shell/extensions/lunar-calendar/">
+    <key name="show-time" type="b">
+      <default>true</default>
+    </key>
+    <key name="show-date" type="b">
+      <default>false</default>
+    </key>
+    <key name="show-calendar" type="b">
+      <default>true</default>
+    </key>
+    <key name="jieri" type="b">
+      <default>true</default>
+    </key>
+    <key name="jieri-color" type="s">
+      <default>'white'</default>
+    </key>
+    <key name="zti-dx" enum="font-sizes">
+      <default>'none'</default>
+    </key>
+  </schema>
+</schemalist>

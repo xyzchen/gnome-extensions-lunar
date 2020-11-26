@@ -14,8 +14,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 //地支名称
 const _g_diZhi = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
-//星期名称
-const _g_Weekname = ["日", "一", "二", "三", "四", "五", "六"];
 
 //农历组件
 const LunarDate = imports.gi.GILunar.Date;
@@ -62,11 +60,6 @@ LunarDate.prototype.getDateSting = function(){
 	}
 }
 
-//获取星期的名称
-LunarDate.prototype.getWeekname = function(){
-	return _g_Weekname[this.weekday];
-}
-
 //农历字符串
 LunarDate.prototype.lunarString = function () {
 	return this.ganzhi + "年" + "(" + this.shengxiao + ")" + this.month_name + "月" + this.day_name;
@@ -79,7 +72,7 @@ LunarDate.prototype.solarString = function () {
 
 //转换成字符串（公历和农历）
 LunarDate.prototype.toString = function() {
-	return this.solarString() + "(农历：" + this.lunarString() + ")" + " 星期" + this.getWeekname();
+	return this.solarString() + "(农历：" + this.lunarString() + ")" + " 星期" + this.week_name;
 };
 
 //全局变量

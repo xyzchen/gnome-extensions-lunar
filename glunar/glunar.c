@@ -38,15 +38,19 @@ enum {
 	PROP_SHENGXIAO,
 	PROP_MONTH_NAME,
 	PROP_DAY_NAME,
+	PROP_WEEK_NAME,	/* 星期名称 */
 	PROP_JIEQI,
 	PROP_JIERI,
 	LAST_PROP
 };
 
-//内部函数：计算节日和二十四节气
-static void gi_lunar_date_calc_extras(GILunarDate *self);
+//内部函数：是否字符串资源
+static void gi_lunar_date_free_pointer(GILunarDate *self);
 
-//参数信息
+//内部函数：用 p_lunardate 的值是指对象的数值
+static void gi_lunar_date_set_values(GILunarDate *self, const LUNARDATE* p_lunardate);
+
+//属性参数信息
 static GParamSpec *gParamSpecs [LAST_PROP];
 
 /**
@@ -68,11 +72,7 @@ static void gi_lunar_date_finalize (GObject *object)
 {
 	GILunarDate * self = (GILunarDate *)object;
 	/* 释放字符串对象 */
-	g_clear_pointer (&self->ganzhi, g_free);
-	g_clear_pointer (&self->shengxiao, g_free);
-	g_clear_pointer (&self->month_name, g_free);
-	g_clear_pointer (&self->day_name, g_free);
-	g_clear_pointer (&self->jieri, g_free);
+	gi_lunar_date_free_pointer(self);
 	/* 调用父类的函数 */
 	G_OBJECT_CLASS (gi_lunar_date_parent_class)->finalize (object);
 }
@@ -125,6 +125,9 @@ static void gi_lunar_date_get_property (GObject  *object,
 		case PROP_DAY_NAME:
 			g_value_set_string (value, self->day_name);
 			break;
+		case PROP_WEEK_NAME:	//星期名称字符串
+			g_value_set_string (value, cjxGetWeekName(self->weekday));
+			break;
 		case PROP_JIEQI:
 			g_value_set_string (value, self->jieqi);
 			break;
@@ -157,9 +160,6 @@ static void gi_lunar_date_set_property (GObject	*object,
 		case PROP_DAY:
 			self->day = g_value_get_uint(value);
 			break;
-		case PROP_WEEKDAY:
-			self->weekday = g_value_get_uint(value);
-			break;
 		case PROP_LUNAR_YEAR:
 			self->lunar_year = g_value_get_uint(value);
 			break;
@@ -172,28 +172,9 @@ static void gi_lunar_date_set_property (GObject	*object,
 		case PROP_IS_LEAPMONTH:
 			self->is_leapmonth = g_value_get_uint(value);
 			break;
-		/* 以下的是只读的属性
-		case PROP_GANZHI:
-			self->ganzhi = g_value_dup_string(value);
-			break;
-		case PROP_SHENGXIAO:
-			self->shengxiao = g_value_dup_string(value);
-			break;
-		case PROP_MONTH_NAME:
-			self->month_name = g_value_dup_string(value);
-			break;
-		case PROP_DAY_NAME:
-			self->day_name = g_value_dup_string(value);
-			break;
-		case PROP_JIEQI:
-			self->jieqi = g_value_dup_string(value);
-			break;
-		case PROP_JIERI:
-			self->jieri = g_value_dup_string(value);
-			break;
-		*/
 		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			//其他属性为只读属性
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
 		}
 }
 
@@ -314,6 +295,14 @@ static void gi_lunar_date_class_init (GILunarDateClass *klass)
 							 NULL,
 							 G_PARAM_READWRITE);
 
+	//week_name
+	gParamSpecs[PROP_WEEK_NAME] =
+		g_param_spec_string( "week_name",
+							 "WeekName",
+							 "星期名称.",
+							 NULL,
+							 G_PARAM_READWRITE);
+
 	//jieqi
 	gParamSpecs[PROP_JIEQI] =
 		g_param_spec_string( "jieqi",
@@ -349,22 +338,8 @@ static void gi_lunar_date_init (GILunarDate *self)
 	lunardate.wMonth = ptm->tm_mon  + 1;
 	lunardate.wDay   = ptm->tm_mday;
 	cjxGetLunarDate(&lunardate);
-	// 设置数值给对象
-	self->year = lunardate.wYear;
-	self->month = lunardate.wMonth;
-	self->day    = lunardate.wDay;
-	self->weekday = lunardate.wWeekDay;
-	self->lunar_year = lunardate.wLunarYear;
-	self->lunar_month = lunardate.wLunarMonth;
-	self->lunar_day    = lunardate.wLunarDay;
-	self->is_leapmonth = lunardate.wIsLeapMonth;
-	// 设置字符串
-	self->ganzhi = g_strdup(lunardate.szYearGanZhi);
-	self->shengxiao = g_strdup(lunardate.szYearShengXiao);
-	self->month_name = g_strdup(lunardate.szLunarMonth);
-	self->day_name = g_strdup(lunardate.szLunarDay);
-	// 计算节日和农历二十四节气
-	gi_lunar_date_calc_extras(self);
+	// 设置对象的值
+	gi_lunar_date_set_values(self, &lunardate);
 }
 
 /******  其它类方法  ******/
@@ -378,29 +353,10 @@ void gi_lunar_date_calc_lunar_date(GILunarDate *self)
 	lunardate.wMonth = self->month;
 	lunardate.wDay   = self->day;
 	cjxGetLunarDate(&lunardate);
-	/* 释放字符串对象 */
-	g_clear_pointer (&self->ganzhi, g_free);
-	g_clear_pointer (&self->shengxiao, g_free);
-	g_clear_pointer (&self->month_name, g_free);
-	g_clear_pointer (&self->day_name, g_free);
-	g_clear_pointer (&self->jieqi, g_free);
-	g_clear_pointer (&self->jieri, g_free);
-	// 指数值给对象
-	self->year = lunardate.wYear;
-	self->month = lunardate.wMonth;
-	self->day    = lunardate.wDay;
-	self->weekday = lunardate.wWeekDay;
-	self->lunar_year = lunardate.wLunarYear;
-	self->lunar_month = lunardate.wLunarMonth;
-	self->lunar_day    = lunardate.wLunarDay;
-	self->is_leapmonth = lunardate.wIsLeapMonth;
-	// 设置字符串
-	self->ganzhi = g_strdup(lunardate.szYearGanZhi);
-	self->shengxiao = g_strdup(lunardate.szYearShengXiao);
-	self->month_name = g_strdup(lunardate.szLunarMonth);
-	self->day_name = g_strdup(lunardate.szLunarDay);
-	// 计算节日和农历二十四节气
-	gi_lunar_date_calc_extras(self);
+	// 释放字符串对象
+	gi_lunar_date_free_pointer(self);
+	// 设置对象的值
+	gi_lunar_date_set_values(self, &lunardate);
 }
 
 /* 使用农历数据计算公历  */
@@ -414,106 +370,68 @@ void  gi_lunar_date_calc_solar_date(GILunarDate *self)
 	lunardate.wLunarDay   = self->lunar_day;
 	lunardate.wIsLeapMonth = self->is_leapmonth;
 	cjxGetSolarDate(&lunardate);
-	/* 释放字符串对象 */
-	g_clear_pointer (&self->ganzhi, g_free);
-	g_clear_pointer (&self->shengxiao, g_free);
-	g_clear_pointer (&self->month_name, g_free);
-	g_clear_pointer (&self->day_name, g_free);
-	g_clear_pointer (&self->jieqi, g_free);
-	g_clear_pointer (&self->jieri, g_free);
-	// 指数值给对象
-	self->year = lunardate.wYear;
-	self->month = lunardate.wMonth;
-	self->day    = lunardate.wDay;
-	self->weekday = lunardate.wWeekDay;
-	self->lunar_year = lunardate.wLunarYear;
-	self->lunar_month = lunardate.wLunarMonth;
-	self->lunar_day    = lunardate.wLunarDay;
-	self->is_leapmonth = lunardate.wIsLeapMonth;
-	// 设置字符串
-	self->ganzhi = g_strdup(lunardate.szYearGanZhi);
-	self->shengxiao = g_strdup(lunardate.szYearShengXiao);
-	self->month_name = g_strdup(lunardate.szLunarMonth);
-	self->day_name = g_strdup(lunardate.szLunarDay);
-	// 计算节日和农历二十四节气
-	gi_lunar_date_calc_extras(self);
+	// 释放字符串对象
+	gi_lunar_date_free_pointer(self);
+	// 设置对象的值
+	gi_lunar_date_set_values(self, &lunardate);
 }
 
 /*  设置巩俐日期，自动计算农历数据 */
 void  gi_lunar_date_set_solar_date(GILunarDate *self, guint year, guint month, guint day)
 {
 	// 创建农历信息
-    LUNARDATE lunardate;
-    memset(&lunardate, 0, sizeof(lunardate));
-    lunardate.wYear  = year;                                                                                    
-    lunardate.wMonth = month;
-    lunardate.wDay   = day;
-    cjxGetLunarDate(&lunardate);
-    /* 释放字符串对象 */
-    g_clear_pointer (&self->ganzhi, g_free);
-    g_clear_pointer (&self->shengxiao, g_free);
-    g_clear_pointer (&self->month_name, g_free);
-    g_clear_pointer (&self->day_name, g_free);
-    g_clear_pointer (&self->jieqi, g_free);
-    g_clear_pointer (&self->jieri, g_free);
-    // 指数值给对象
-    self->year = lunardate.wYear;
-    self->month = lunardate.wMonth;
-    self->day    = lunardate.wDay;
-    self->weekday = lunardate.wWeekDay;
-    self->lunar_year = lunardate.wLunarYear;
-    self->lunar_month = lunardate.wLunarMonth;
-    self->lunar_day    = lunardate.wLunarDay;
-    self->is_leapmonth = lunardate.wIsLeapMonth;
-    // 设置字符串
-    self->ganzhi = g_strdup(lunardate.szYearGanZhi);
-    self->shengxiao = g_strdup(lunardate.szYearShengXiao);
-    self->month_name = g_strdup(lunardate.szLunarMonth);
-    self->day_name = g_strdup(lunardate.szLunarDay);
-    // 计算节日和农历二十四节气
-    gi_lunar_date_calc_extras(self);
+	LUNARDATE lunardate;
+	memset(&lunardate, 0, sizeof(lunardate));
+	lunardate.wYear  = year;
+	lunardate.wMonth = month;
+	lunardate.wDay   = day;
+	cjxGetLunarDate(&lunardate);
+	// 释放字符串对象
+	gi_lunar_date_free_pointer(self);
+	// 设置对象的值
+	gi_lunar_date_set_values(self, &lunardate);
 }
 
 /* 设置农历日期，并自动计算公历 */
 void  gi_lunar_date_set_lunar_date(GILunarDate *self, guint year, guint month, guint day, guint leap)
 {
-    // 创建农历信息
-    LUNARDATE lunardate;
-    memset(&lunardate, 0, sizeof(lunardate));
-    lunardate.wLunarYear  = year;
-    lunardate.wLunarMonth = month;
-    lunardate.wLunarDay   = day;
-    lunardate.wIsLeapMonth = leap;
-    cjxGetSolarDate(&lunardate);
-    /* 释放字符串对象 */
-    g_clear_pointer (&self->ganzhi, g_free);
-    g_clear_pointer (&self->shengxiao, g_free);
-    g_clear_pointer (&self->month_name, g_free);
-    g_clear_pointer (&self->day_name, g_free);
-    g_clear_pointer (&self->jieqi, g_free);
-    g_clear_pointer (&self->jieri, g_free);
-    // 指数值给对象
-    self->year = lunardate.wYear;
-    self->month = lunardate.wMonth;
-    self->day    = lunardate.wDay;
-    self->weekday = lunardate.wWeekDay;
-    self->lunar_year = lunardate.wLunarYear;
-    self->lunar_month = lunardate.wLunarMonth;
-    self->lunar_day    = lunardate.wLunarDay;
-    self->is_leapmonth = lunardate.wIsLeapMonth;
-    // 设置字符串
-    self->ganzhi = g_strdup(lunardate.szYearGanZhi);
-    self->shengxiao = g_strdup(lunardate.szYearShengXiao);
-    self->month_name = g_strdup(lunardate.szLunarMonth);
-    self->day_name = g_strdup(lunardate.szLunarDay);
-    // 计算节日和农历二十四节气
-    gi_lunar_date_calc_extras(self);
+	// 创建农历信息
+	LUNARDATE lunardate;
+	memset(&lunardate, 0, sizeof(lunardate));
+	lunardate.wLunarYear  = year;
+	lunardate.wLunarMonth = month;
+	lunardate.wLunarDay   = day;
+	lunardate.wIsLeapMonth = leap;
+	cjxGetSolarDate(&lunardate);
+	// 释放字符串对象
+	gi_lunar_date_free_pointer(self);
+	// 设置对象的值
+	gi_lunar_date_set_values(self, &lunardate);
 }
 
-/**********************************************/
-// 此函数用于计算节日和农历二十四节气
-static void gi_lunar_date_calc_extras(GILunarDate *self)
+/**********************************************
+ * 下面的是内部函数
+ */
+//内部函数：用 p_lunardate 的值是指对象的数值
+static void gi_lunar_date_set_values(GILunarDate *self, const LUNARDATE* p_lunardate)
 {
+	// 指数值给对象
+	self->year = p_lunardate->wYear;
+	self->month = p_lunardate->wMonth;
+	self->day	= p_lunardate->wDay;
+	self->weekday = p_lunardate->wWeekDay;
+	self->lunar_year = p_lunardate->wLunarYear;
+	self->lunar_month = p_lunardate->wLunarMonth;
+	self->lunar_day	= p_lunardate->wLunarDay;
+	self->is_leapmonth = p_lunardate->wIsLeapMonth;
+	// 设置字符串
+	self->ganzhi = g_strdup(p_lunardate->szYearGanZhi);
+	self->shengxiao = g_strdup(p_lunardate->szYearShengXiao);
+	self->month_name = g_strdup(p_lunardate->szLunarMonth);
+	self->day_name = g_strdup(p_lunardate->szLunarDay);
+	//——————————————————————————————————————————————————————
+	//是指公农历节日和二十四节气
+	//——————————————————————————————————————————————————————
 	//获取农历二十四节气信息
 	const char* jieqistr = cjxGetTermName(self->year, self->month, self->day);
 	if(jieqistr)
@@ -523,11 +441,18 @@ static void gi_lunar_date_calc_extras(GILunarDate *self)
 	//获取节日信息
 	char jieri_buffer[200];
 	memset(jieri_buffer, 0, sizeof(jieri_buffer));
-	//获取农历节日
-	const char* lunar_jieri = cjxGetLunarHolidayName(self->lunar_month, self->lunar_day);
-	if(lunar_jieri)
+	//先获取农历节日, 设置农历节日为清明节
+	if((jieqistr != NULL) && (strcmp(jieqistr, "清明")==0))
 	{
-		strcpy(jieri_buffer, lunar_jieri);
+		strcpy(jieri_buffer, jieqistr);
+	}
+	else
+	{
+		const char* lunar_jieri = cjxGetLunarHolidayName(self->lunar_month, self->lunar_day);
+		if(lunar_jieri)
+		{
+			strcpy(jieri_buffer, "清明节");
+		}
 	}
 	//获取公历节日
 	const char* solar_jieri = cjxGetSolarHolidayName(self->month, self->day);
@@ -536,9 +461,22 @@ static void gi_lunar_date_calc_extras(GILunarDate *self)
 		strcat(jieri_buffer, "|");
 		strcat(jieri_buffer, solar_jieri);
 	}
-	//设置节日
+	//设置节日字符串
 	if(strlen(jieri_buffer) > 0)
 	{
 		self->jieri = g_strdup(jieri_buffer);
 	}
+}
+
+
+//内部函数：是否字符串资源
+static void gi_lunar_date_free_pointer(GILunarDate *self)
+{
+	/* 释放字符串对象 */
+	g_clear_pointer (&self->ganzhi, g_free);
+	g_clear_pointer (&self->shengxiao, g_free);
+	g_clear_pointer (&self->month_name, g_free);
+	g_clear_pointer (&self->day_name, g_free);
+	g_clear_pointer (&self->jieqi, g_free);
+	g_clear_pointer (&self->jieri, g_free);
 }

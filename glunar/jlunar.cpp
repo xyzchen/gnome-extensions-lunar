@@ -13,6 +13,32 @@
 #include <string.h>
 #include "jlunar.h"
 
+//
+//内部使用的数据结构
+//
+//--------------------------------------
+//  几月几日 是 什么节 的 节日数据结构
+//      公历农历通用
+//--------------------------------------
+typedef struct _tagHOLIDAY
+{
+	WORD  wMonth;			//月 1 ~ 12
+	WORD  wDay;				//日 1 ~ 31
+	char szName[24];		//节日名, 7 个汉字
+}HOLIDAY;
+
+//----------------------------------------
+//  数据结构: 几月的第几个星期几是什么节?
+//           公历专用
+//----------------------------------------
+typedef struct _tagHOLIDAY2
+{
+	WORD	wMonth;			// 几月? 1 ~ 12
+	WORD	wN;				// 第几个星期?
+	WORD	wWeekday;		// 星期几
+	char	szName[24];		//节日名, 7 个汉字
+}HOLIDAY2;
+
 //-------------------------------------------------------------
 //         下面是实现部分的常数数据定义
 //-------------------------------------------------------------
@@ -23,16 +49,18 @@ const double PI = 3.1415926535897932;
 const double QUOTIETY = PI * 15.0 / 180.0; 
 
 /* 天干名称 */
-const char* const cg_szTianGan[] =	{	//0 - 甲
-									_T("甲"),	_T("乙"),	_T("丙"),	_T("丁"),	_T("戊"),
-									_T("己"),	_T("庚"),	_T("辛"),	_T("壬"),	_T("癸")
-								};
+const char* const cg_szTianGan[] = {	//0 - 甲
+		_T("甲"),	_T("乙"),	_T("丙"),	_T("丁"),	_T("戊"),
+		_T("己"),	_T("庚"),	_T("辛"),	_T("壬"),	_T("癸")
+	};
+
 /* 地支名称 */
-const char* const cg_szDiZhi[] =	{	//0 - 子
-									_T("子"),	_T("丑"),	_T("寅"),	_T("卯"),
-									_T("辰"),	_T("巳"),	_T("午"),	_T("未"),
-									_T("申"),	_T("酉"),	_T("戌"),	_T("亥")
-								};
+const char* const cg_szDiZhi[] = {	//0 - 子
+		_T("子"),	_T("丑"),	_T("寅"),	_T("卯"),
+		_T("辰"),	_T("巳"),	_T("午"),	_T("未"),
+		_T("申"),	_T("酉"),	_T("戌"),	_T("亥")
+	};
+
 /* 十二生肖属相名称 */
 const char* const cg_szShuXiang[] ={	// 0 - 鼠 
 									_T("鼠"),	_T("牛"),	_T("虎"),	_T("兔"),
@@ -58,27 +86,27 @@ const char* const cg_szMonName[] = {_T("*"),  //0
 
 /* 星期名称, 0 = 星期日 */
 const char* const cg_szWeekName[] = {
-							_T("日"),	_T("一"),	_T("二"),	_T("三"),
-							_T("四"),	_T("五"),	_T("六"),	_T("")
-						};
+		_T("日"),	_T("一"),	_T("二"),	_T("三"),
+		_T("四"),	_T("五"),	_T("六"),	_T("")
+	};
 
 /* 农历二十四节气名称数据 */
 const char* const cg_szLunarJieqi[] = { // 0 ~ 23
-									//  以 0 小寒 起算
-									_T("小寒"), _T("大寒"), // 一月的节气
-									_T("立春"), _T("雨水"), // 二月的节气
-									_T("惊蛰"), _T("春分"),
-									_T("清明"), _T("谷雨"),
-									_T("立夏"), _T("小满"),
-									_T("芒种"), _T("夏至"),
-									_T("小暑"), _T("大暑"),
-									_T("立秋"), _T("处暑"),
-									_T("白露"), _T("秋分"),
-									_T("寒露"), _T("霜降"),
-									_T("立冬"), _T("小雪"),
-									_T("大雪"), _T("冬至")
-									
-								};
+		//  以 0 小寒 起算
+		_T("小寒"), _T("大寒"), // 一月的节气
+		_T("立春"), _T("雨水"), // 二月的节气
+		_T("惊蛰"), _T("春分"),
+		_T("清明"), _T("谷雨"),
+		_T("立夏"), _T("小满"),
+		_T("芒种"), _T("夏至"),
+		_T("小暑"), _T("大暑"),
+		_T("立秋"), _T("处暑"),
+		_T("白露"), _T("秋分"),
+		_T("寒露"), _T("霜降"),
+		_T("立冬"), _T("小雪"),
+		_T("大雪"), _T("冬至")
+	};
+
 /* 十二星座的数据 */
 const char* const cg_szXingZuo[] = { //
 		_T("摩羯"),	//12.22 ~ 1.21
@@ -127,13 +155,14 @@ const HOLIDAY2 cg_stHoliday2[]= {
 const HOLIDAY cg_stLunarHoliday[] = {
 		{ 0,  0,  _T("")			},//0, 无节日
 		{ 1,  1,  _T("春节")		},//1
-		{ 1, 15,  _T("元霄")		},
-		{ 5,  5,  _T("端午")		},
+		{ 1, 15,  _T("元霄节")		},
+		{ 5,  5,  _T("端午节")		},
 		{ 7,  7,  _T("七夕")		},//5
-		{ 8, 15,  _T("中秋")		},
-		{ 9,  9,  _T("重阳")		},
-		{12,  8,  _T("腊八")		}
+		{ 8, 15,  _T("中秋节")		},
+		{ 9,  9,  _T("重阳节")		},
+		{12,  8,  _T("腊八节")		}
 	};
+
 //------------------------------------------------
 //		下面是农历计算部分帮助函数
 //------------------------------------------------
@@ -143,6 +172,7 @@ const int cg_wMonthAdd[] = { // index =1 为1月
 								0,  31,  59,  90,  120,  151,	// 1 ~ 6月
 								181,212, 243, 273, 304,  334	// 7 ~ 12月
 							};
+
 /* 公历每月的天数  */
 const int cg_wMonthDays[] = { // index =1 为1月
 								0, 
@@ -857,8 +887,7 @@ LUNAR_API const char* cjxGetXingzuoName(int month, int day)
 //-----------------------------------------------------
 LUNAR_API const char* cjxGetLunarHolidayName(WORD wLunarMonth, WORD wLunarDay)
 {
-	int id = 0;
-	for( ;id < sizeof(cg_stLunarHoliday)/sizeof(HOLIDAY); id++)
+	for(size_t id=0; id < sizeof(cg_stLunarHoliday)/sizeof(HOLIDAY); id++)
 	{
 		if( (wLunarMonth == cg_stLunarHoliday[id].wMonth)
 			&& (wLunarDay == cg_stLunarHoliday[id].wDay ) 
@@ -877,7 +906,7 @@ LUNAR_API const char* cjxGetLunarHolidayName(WORD wLunarMonth, WORD wLunarDay)
 //-----------------------------------------------
 LUNAR_API const char* cjxGetSolarHolidayName(WORD wMonth, WORD wDay)
 {
-	for(int id = 1; id < sizeof(cg_stHoliday)/sizeof(HOLIDAY); id++)
+	for(size_t id = 1; id < sizeof(cg_stHoliday)/sizeof(HOLIDAY); id++)
 	{
 		if( (wMonth == cg_stHoliday[id].wMonth)
 			&& (wDay == cg_stHoliday[id].wDay ) 

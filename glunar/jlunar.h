@@ -46,31 +46,9 @@ typedef struct _tagLUNARDATE
 	char szYearGanZhi[10];		// 农历年的干支字符串, 如"辛未"
 	char szYearShengXiao[10];	// 生肖字符串, 如 "羊"
 	char szLunarMonth[10];		// 农历月的字符串, 如"闰四"
-	char szLunarDay[10];			// 农历日期字符串, 如"初五"
+	char szLunarDay[10];		// 农历日期字符串, 如"初五"
 }LUNARDATE;
 
-//--------------------------------------
-//  几月几日 是 什么节 的 节日数据结构
-//      公历农历通用
-//--------------------------------------
-typedef struct _tagHOLIDAY
-{
-	WORD  wMonth;			//月 1 ~ 12
-	WORD  wDay;				//日 1 ~ 31
-	char szName[30]; //节日名, 14 个汉字
-}HOLIDAY;
-
-//----------------------------------------
-//  数据结构: 几月的第几个星期几是什么节?
-//           公历专用
-//----------------------------------------
-typedef struct _tagHOLIDAY2
-{
-	WORD	wMonth;			// 几月? 1 ~ 12
-	WORD	wN;				// 第几个星期?
-	WORD	wWeekday;		// 星期几
-	char	szName[30];	//节日名, 14 个汉字
-}HOLIDAY2;
 
 //------------------------------------------------------
 //	 日历函数, 下面的函数只对 1900~2100年有效

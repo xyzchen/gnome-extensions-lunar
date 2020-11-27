@@ -258,7 +258,11 @@ function enable() {
 				l = "<span weight='bold' color='" + localSettings.jieri_color + "'>" + l + "</span>";
 			}
 			if(yd != ""){
-				l += "\n<small>" + ld.getDateSting() + "</small>";
+				if (jr != null && jr != ""){
+					l += "\n<small><span color='" + localSettings.jieri_color + "'>" + ld.getDateSting() + "</span></small>";
+				}else{
+					l += "\n<small>" + ld.getDateSting() + "</small>";
+				}
 			}
 			if(dx != "none"){
 				l = "<span size='" + dx + "'>" + l + "</span>";

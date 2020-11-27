@@ -3,6 +3,6 @@
 	"description": "Display Chinese Lunar Calendar in panel",
 	"uuid": "lunarcal@jmchxy",
 	"original-authors": ["jmchxy@gmail.com"],
-	"shell-version": ["3.32.2"],
-	"url": "https://gitlab.gnome.org/GNOME/gnome-shell-extensions"
+	"shell-version": ["3.30", "3.32"],
+	"url": "https://github.com/xyzchen/gnome-extensions-lunar"
 }

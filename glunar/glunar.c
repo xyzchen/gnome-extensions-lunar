@@ -451,7 +451,7 @@ static void gi_lunar_date_set_values(GILunarDate *self, const LUNARDATE* p_lunar
 		const char* lunar_jieri = cjxGetLunarHolidayName(self->lunar_month, self->lunar_day);
 		if(lunar_jieri)
 		{
-			strcpy(jieri_buffer, "清明节");
+			strcpy(jieri_buffer, lunar_jieri);
 		}
 	}
 	//获取公历节日

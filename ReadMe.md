@@ -9,8 +9,8 @@
 
 ```
 	cd glunar
-	meson dist
-	cd dist
+	meson build
+	cd build
 	sudo meson install
 ```
 

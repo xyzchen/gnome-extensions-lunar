@@ -12,6 +12,9 @@
 	meson build
 	cd build
 	sudo meson install
+	#如果扩展不能正常运行，执行如下命令
+	sudo cp /usr/local/lib64/liblunar.so /usr/lib64/
+	sudo cp /usr/local/lib64/girepository-1.0/GILunar-1.0.typelib /usr/lib64/girepository-1.0/
 ```
 
 ### 2. install gnome-shell-extension 安装Gnome-shell扩展
